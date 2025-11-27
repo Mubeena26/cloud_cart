@@ -1,7 +1,5 @@
-import 'package:cloud_cart/core/common/widgets/custom_elevated_text_button.dart';
 import 'package:cloud_cart/core/common/widgets/product_card.dart';
 import 'package:cloud_cart/core/theme/colors.dart';
-import 'package:cloud_cart/core/theme/ppages.dart';
 import 'package:cloud_cart/core/theme/text_styles.dart';
 import 'package:cloud_cart/presentation/products/add_product_screen.dart';
 import 'package:cloud_cart/presentation/products/controller/product_controller.dart';
@@ -25,10 +23,10 @@ class ProductPage extends ConsumerWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           flexibleSpace: Container(
-            padding: const EdgeInsets.only(top: 40, left: 16, right: 16),
+            padding: const EdgeInsets.only(top: 70, left: 16, right: 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFFD7EFDB), Color(0xFFFBFBF3)],
+                colors: [Color.fromARGB(255, 177, 208, 183), Color(0xFFFBFBF3)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -36,44 +34,13 @@ class ProductPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: PColors.colorFFFFFF,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search,
-                              size: 20,
-                              color: Color(0xff636468),
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: "Search Medicines",
-                                  hintStyle: getTextStylNunito(
-                                    color: Color(0xff85868A),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  border: InputBorder.none,
-                                  isCollapsed: true,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
+                Text(
+                  'Products',
+                  style: getTextStylNunito(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xff090F47),
+                  ),
                 ),
               ],
             ),
@@ -82,31 +49,6 @@ class ProductPage extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 47,
-                  child: CustomElavatedTextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, PPages.addProdcut);
-                    },
-                    bgcolor: PColors.colorFFFFFF,
-                    text: "+ Add Product",
-                    borderColor: PColors.color0C9C34,
-                    textStyle: getTextStylNunito(
-                      color: PColors.color0C9C34,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    borderRadius: 8,
-                  ),
-                ),
-                const SizedBox(height: 15),
-              ],
-            ),
-          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -125,13 +67,13 @@ class ProductPage extends ConsumerWidget {
                     );
                   }
                   return GridView.builder(
-                    padding: const EdgeInsets.only(bottom: 80),
+                    padding: const EdgeInsets.only(bottom: 90),
                     itemCount: products.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 10,
-                          mainAxisSpacing: 22,
+                          mainAxisSpacing: 29,
                           childAspectRatio: 0.74,
                         ),
                     itemBuilder: (context, index) {
@@ -141,9 +83,25 @@ class ProductPage extends ConsumerWidget {
                         title: product.name,
                         price: product.price.toInt(),
                         originalPrice: (product.price * 1.5).toInt(),
+                        quantity: product.quantity,
                         isAvailable: product.quantity > 0,
                         hasDiscount: false,
                         discountText: "",
+                        onEdit: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  AddProductScreen(productToEdit: product),
+                            ),
+                          );
+                          // Refresh products after returning from edit screen
+                          if (context.mounted) {
+                            ref
+                                .read(productControllerProvider.notifier)
+                                .loadProducts();
+                          }
+                        },
                       );
                     },
                   );

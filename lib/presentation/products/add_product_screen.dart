@@ -12,7 +12,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 class AddProductBody extends ConsumerStatefulWidget {
-  const AddProductBody({super.key});
+  final ProductEntity? productToEdit;
+
+  const AddProductBody({super.key, this.productToEdit});
 
   @override
   ConsumerState<AddProductBody> createState() => _AddProductBodyState();
@@ -23,7 +25,22 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   File? _selectedImage;
+  String? _existingImageUrl;
   bool _isLoading = false;
+  bool _isEditMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isEditMode = widget.productToEdit != null;
+    if (_isEditMode && widget.productToEdit != null) {
+      final product = widget.productToEdit!;
+      _nameController.text = product.name;
+      _priceController.text = product.price.toString();
+      _quantityController.text = product.quantity.toString();
+      _existingImageUrl = product.image;
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -145,7 +162,7 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
       return;
     }
 
-    if (_selectedImage == null) {
+    if (_selectedImage == null && _existingImageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a product image')),
       );
@@ -157,29 +174,45 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
     });
 
     try {
-      // Upload image first
-      final imageUrl = await _uploadImageToSupabase(_selectedImage!);
+      String? imageUrl = _existingImageUrl;
+
+      // Upload new image if one was selected
+      if (_selectedImage != null) {
+        imageUrl = await _uploadImageToSupabase(_selectedImage!);
+        if (imageUrl == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
       if (imageUrl == null) {
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image URL is required')),
+        );
         return;
       }
 
       // Create product entity (values already validated above)
       final product = ProductEntity(
-        id: const Uuid().v4(),
+        id: _isEditMode ? widget.productToEdit!.id : const Uuid().v4(),
         name: _nameController.text.trim(),
         price: priceValue,
         quantity: quantityValue,
         image: imageUrl,
       );
 
-      // Add product using controller
+      // Add or update product using controller
       final controller = ref.read(productControllerProvider.notifier);
 
       try {
-        final success = await controller.addProduct(product);
+        final success = _isEditMode
+            ? await controller.updateProduct(product)
+            : await controller.addProduct(product);
 
         if (mounted) {
           setState(() {
@@ -188,7 +221,11 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
 
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Product added successfully!')),
+              SnackBar(
+                content: Text(_isEditMode
+                    ? 'Product updated successfully!'
+                    : 'Product added successfully!'),
+              ),
             );
             Navigator.pop(context);
           }
@@ -200,7 +237,8 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
           });
 
           // Provide user-friendly error messages
-          String errorMessage = 'Failed to add product';
+          String errorMessage =
+              _isEditMode ? 'Failed to update product' : 'Failed to add product';
           final errorString = e.toString().toLowerCase();
           bool isRLSError = false;
 
@@ -240,7 +278,9 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
             errorMessage =
                 'Network error. Please check your internet connection.';
           } else {
-            errorMessage = 'Failed to add product: ${e.toString()}';
+            errorMessage = _isEditMode
+                ? 'Failed to update product: ${e.toString()}'
+                : 'Failed to add product: ${e.toString()}';
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -303,7 +343,7 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
             textHead: "Product Name",
             headTextStyle: getTextStylNunito(
               fontSize: 14,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: const Color(0xff424242),
             ),
           ),
@@ -334,7 +374,18 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
                       borderRadius: BorderRadius.circular(10),
                       child: Image.file(_selectedImage!, fit: BoxFit.cover),
                     )
-                  : const Center(child: Icon(Icons.add, color: Colors.grey)),
+                  : _existingImageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            _existingImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(
+                                    child: Icon(Icons.add, color: Colors.grey)),
+                          ),
+                        )
+                      : const Center(child: Icon(Icons.add, color: Colors.grey)),
             ),
           ),
           const SizedBox(height: 16),
@@ -378,7 +429,9 @@ class _AddProductBodyState extends ConsumerState<AddProductBody> {
 }
 
 class AddProductScreen extends ConsumerStatefulWidget {
-  const AddProductScreen({super.key});
+  final ProductEntity? productToEdit;
+
+  const AddProductScreen({super.key, this.productToEdit});
 
   @override
   ConsumerState<AddProductScreen> createState() => _AddProductScreenState();
@@ -387,6 +440,92 @@ class AddProductScreen extends ConsumerStatefulWidget {
 class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final GlobalKey<_AddProductBodyState> _bodyKey =
       GlobalKey<_AddProductBodyState>();
+
+  Future<void> _showDeleteDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Are you sure you want to delete?',
+              style: getTextStylNunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xff090F47),
+              ),
+            ),
+            const Divider(height: 24),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context, true);
+              },
+              child: Text(
+                'Yes',
+                style: getTextStylNunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+            const Divider(height: 24),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context, false);
+              },
+              child: Text(
+                'No',
+                style: getTextStylNunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xff424242),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && widget.productToEdit != null) {
+      final controller = ref.read(productControllerProvider.notifier);
+      try {
+        final success = await controller.deleteProduct(widget.productToEdit!.id);
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Product deleted successfully!'),
+              ),
+            );
+            Navigator.pop(context);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete product'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting product: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -436,7 +575,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           title: Padding(
             padding: const EdgeInsets.only(right: 110),
             child: Text(
-              'Add Product',
+              widget.productToEdit != null ? 'Edit Product' : 'Add Product',
               style: getTextStylNunito(
                 color: const Color(0xff090F47),
                 fontWeight: FontWeight.w700,
@@ -444,6 +583,36 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               ),
             ),
           ),
+          actions: widget.productToEdit != null
+              ? [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: GestureDetector(
+                      onTap: () => _showDeleteDialog(context, ref),
+                      child: Container(
+                        height: 43,
+                        width: 43,
+                        decoration: BoxDecoration(
+                          color: PColors.colorFFFFFF,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ]
+              : null,
         ),
       ),
       body: Column(
@@ -451,7 +620,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-              child: AddProductBody(key: _bodyKey),
+              child: AddProductBody(
+                key: _bodyKey,
+                productToEdit: widget.productToEdit,
+              ),
             ),
           ),
         ],
@@ -471,7 +643,11 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                       bodyState?._addProduct();
                     },
               bgcolor: PColors.color0C9C34,
-              text: (isLoading || isLocalLoading) ? "Adding..." : "Add Product",
+              text: (isLoading || isLocalLoading)
+                  ? (widget.productToEdit != null ? "Updating..." : "Adding...")
+                  : (widget.productToEdit != null
+                      ? "Update Product"
+                      : "Add Product"),
               textColor: PColors.colorFFFFFF,
               borderColor: Colors.transparent,
               borderRadius: 16,

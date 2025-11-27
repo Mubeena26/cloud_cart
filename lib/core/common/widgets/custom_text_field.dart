@@ -3,8 +3,6 @@ import 'package:cloud_cart/core/theme/text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
-
 class CustomTextFeild extends StatefulWidget {
   final String? textHead;
   final String hintText;
@@ -36,36 +34,37 @@ class CustomTextFeild extends StatefulWidget {
   final String? Function(String? val)? validation;
   final TextInputType? keyboardType;
   final bool readOnly;
-  const CustomTextFeild(
-      {super.key,
-      this.onTap,
-      this.textHead,
-      this.obscureText = false,
-      required this.hintText,
-      this.suffixIcon,
-      this.sufixfn,
-      this.onSaved,
-      this.onSubmitted,
-      this.onChanged,
-      this.validation,
-      this.keyboardType,
-      this.hintColor,
-      this.autofillHints,
-      this.controller,
-      required this.filColor,
-      this.prefixIcon,
-      this.prefixfn,
-      this.textColor,
-      this.focusNode,
-      this.maxLine,
-      this.maxLength,
-      this.contentPadVertical,
-      this.inputFormatters,
-      this.borderRadius,
-      this.borderColor,
-      this.headTextStyle,
-      this.hintTextStyle,
-      this.readOnly = false});
+  const CustomTextFeild({
+    super.key,
+    this.onTap,
+    this.textHead,
+    this.obscureText = false,
+    required this.hintText,
+    this.suffixIcon,
+    this.sufixfn,
+    this.onSaved,
+    this.onSubmitted,
+    this.onChanged,
+    this.validation,
+    this.keyboardType,
+    this.hintColor,
+    this.autofillHints,
+    this.controller,
+    required this.filColor,
+    this.prefixIcon,
+    this.prefixfn,
+    this.textColor,
+    this.focusNode,
+    this.maxLine,
+    this.maxLength,
+    this.contentPadVertical,
+    this.inputFormatters,
+    this.borderRadius,
+    this.borderColor,
+    this.headTextStyle,
+    this.hintTextStyle,
+    this.readOnly = false,
+  });
 
   @override
   State<CustomTextFeild> createState() => _CustomTextFeildState();
@@ -75,32 +74,33 @@ class _CustomTextFeildState extends State<CustomTextFeild> {
   InputDecoration inputDecoration() {
     return InputDecoration(
       prefixIcon: widget.prefixIcon != null
-          ? GestureDetector(
-              onTap: widget.prefixfn!,
-              child: widget.prefixIcon!,
-            )
+          ? GestureDetector(onTap: widget.prefixfn!, child: widget.prefixIcon!)
           : null,
       suffixIcon: widget.suffixIcon != null
           ? widget.sufixfn != null
-              ? GestureDetector(
-                  onTap: widget.sufixfn,
-                  child: widget.suffixIcon!,
-                )
-              : widget.suffixIcon
+                ? GestureDetector(
+                    onTap: widget.sufixfn,
+                    child: widget.suffixIcon!,
+                  )
+                : widget.suffixIcon
           : null,
       border: InputBorder.none,
       contentPadding: EdgeInsets.symmetric(
-          vertical: widget.contentPadVertical ?? 11, horizontal: 12),
+        vertical: widget.contentPadVertical ?? 11,
+        horizontal: 12,
+      ),
       filled: true,
       fillColor: widget.filColor,
       counterText: '',
       hintText: widget.hintText,
-      hintStyle: widget.hintTextStyle ??
+      hintStyle:
+          widget.hintTextStyle ??
           getTextStyle(
             fontSize: 16,
-            color: widget.hintColor ?? PColors.color000000,
+            color: widget.hintColor ?? Colors.grey[400]!,
             fontWeight: FontWeight.w600,
           ),
+
       enabledBorder: OutlineInputBorder(
         borderSide: BorderSide(
           width: 1,
@@ -153,7 +153,7 @@ class _CustomTextFeildState extends State<CustomTextFeild> {
             style: getTextStyle(
               color: widget.textColor ?? PColors.color000000,
               fontSize: 14, // Reduced size
-              fontWeight: FontWeight.w400, // Reduced boldness
+
               letterSpacing: 0.30,
             ),
             inputFormatters: widget.inputFormatters ?? [],
@@ -168,11 +168,12 @@ class _CustomTextFeildState extends State<CustomTextFeild> {
   Widget textHead() {
     return Text(
       widget.textHead!,
-      style: widget.headTextStyle ??
+      style:
+          widget.headTextStyle ??
           getTextStyle(
             fontSize: 14,
             color: widget.hintColor ?? PColors.color000000,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w400,
           ),
     );
   }

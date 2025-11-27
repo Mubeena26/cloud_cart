@@ -1,5 +1,7 @@
 import 'package:cloud_cart/applications/products/add_product_usecase.dart';
+import 'package:cloud_cart/applications/products/delete_product_usecase.dart';
 import 'package:cloud_cart/applications/products/get_product_usecase.dart';
+import 'package:cloud_cart/applications/products/update_product_usecase.dart';
 import 'package:cloud_cart/domain/product/entities/product_entity.dart';
 import 'package:cloud_cart/domain/product/repositories/product_repository.dart';
 import 'package:cloud_cart/infrastructure/products/product_repository_impl.dart';
@@ -17,6 +19,14 @@ final getProductsUseCaseProvider = Provider<GetProductsUseCase>((ref) {
 
 final addProductUseCaseProvider = Provider<AddProductUseCase>((ref) {
   return AddProductUseCase(ref.watch(productRepositoryProvider));
+});
+
+final updateProductUseCaseProvider = Provider<UpdateProductUseCase>((ref) {
+  return UpdateProductUseCase(ref.watch(productRepositoryProvider));
+});
+
+final deleteProductUseCaseProvider = Provider<DeleteProductUseCase>((ref) {
+  return DeleteProductUseCase(ref.watch(productRepositoryProvider));
 });
 
 // Product State
@@ -44,10 +54,14 @@ class ProductState {
 class ProductController extends StateNotifier<ProductState> {
   final GetProductsUseCase getProductsUseCase;
   final AddProductUseCase addProductUseCase;
+  final UpdateProductUseCase updateProductUseCase;
+  final DeleteProductUseCase deleteProductUseCase;
 
   ProductController({
     required this.getProductsUseCase,
     required this.addProductUseCase,
+    required this.updateProductUseCase,
+    required this.deleteProductUseCase,
   }) : super(ProductState(products: const AsyncValue.loading())) {
     loadProducts();
   }
@@ -78,6 +92,44 @@ class ProductController extends StateNotifier<ProductState> {
       throw e;
     }
   }
+
+  Future<bool> updateProduct(ProductEntity product) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final success = await updateProductUseCase(product);
+      if (success) {
+        await loadProducts(); // Refresh the list
+      }
+      state = state.copyWith(isLoading: false);
+      return success;
+    } catch (e, stackTrace) {
+      state = state.copyWith(isLoading: false);
+      // Log the error for debugging
+      print('Error updating product: $e');
+      print('Stack trace: $stackTrace');
+      // Re-throw to let the UI handle the error message
+      throw e;
+    }
+  }
+
+  Future<bool> deleteProduct(String productId) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final success = await deleteProductUseCase(productId);
+      if (success) {
+        await loadProducts(); // Refresh the list
+      }
+      state = state.copyWith(isLoading: false);
+      return success;
+    } catch (e, stackTrace) {
+      state = state.copyWith(isLoading: false);
+      // Log the error for debugging
+      print('Error deleting product: $e');
+      print('Stack trace: $stackTrace');
+      // Re-throw to let the UI handle the error message
+      throw e;
+    }
+  }
 }
 
 // ProductController Provider
@@ -87,6 +139,8 @@ final productControllerProvider =
     return ProductController(
       getProductsUseCase: ref.watch(getProductsUseCaseProvider),
       addProductUseCase: ref.watch(addProductUseCaseProvider),
+      updateProductUseCase: ref.watch(updateProductUseCaseProvider),
+      deleteProductUseCase: ref.watch(deleteProductUseCaseProvider),
     );
   },
 );

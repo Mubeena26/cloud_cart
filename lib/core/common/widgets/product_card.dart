@@ -8,9 +8,11 @@ class ProductCard extends StatelessWidget {
   final String title;
   final int price;
   final int originalPrice;
+  final int quantity;
   final bool isAvailable;
   final bool hasDiscount;
   final String discountText;
+  final VoidCallback? onEdit; // optional callback for edit button
 
   const ProductCard({
     super.key,
@@ -18,45 +20,57 @@ class ProductCard extends StatelessWidget {
     required this.title,
     required this.price,
     required this.originalPrice,
+    required this.quantity,
     required this.isAvailable,
     required this.hasDiscount,
     required this.discountText,
+    this.onEdit,
   });
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: isAvailable ? 1.0 : 0.5, // dimmed if out of stock
       child: Container(
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: PColors.colorFFFFFF,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isAvailable ? Colors.transparent : Color(0xffF5F5F5),
+            color: const Color(0xffE0E0E0), // Light grey border
+            width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05), // soft shadow
+              blurRadius: 6,
+              spreadRadius: 1,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Image and top tags
             Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Container(
-                    height: 130,
-                    width: 148,
+                    height: 112,
+                    width: double.infinity,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       color: const Color(0xffEEEEF0),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 18),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
                       child: image.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: image,
-                              height: 100,
-                              width: 100,
-                              fit: BoxFit.contain,
+                              fit: BoxFit.cover,
                               placeholder: (context, url) => const Center(
                                 child: CircularProgressIndicator(),
                               ),
@@ -66,10 +80,12 @@ class ProductCard extends StatelessWidget {
                                 color: Colors.grey,
                               ),
                             )
-                          : const Icon(
-                              Icons.image_not_supported,
-                              size: 50,
-                              color: Colors.grey,
+                          : const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 50,
+                                color: Colors.grey,
+                              ),
                             ),
                     ),
                   ),
@@ -82,7 +98,9 @@ class ProductCard extends StatelessWidget {
                     left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xffED6B6B),
                         borderRadius: BorderRadius.circular(10),
@@ -97,75 +115,117 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                // // Approved badge only if in stock
-                // if (isAvailable)
-                //   Positioned(
-                //     top: 8,
-                //     right: 8,
-                //     child: SvgPicture.asset(
-                //     " "
-                //       // height: 22,
-                //       // width: 22,
-                //     ),
-                //   ),
               ],
             ),
 
             // Title
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Text(
                 title,
                 style: getTextStylNunito(
-                  color: const Color(0xff090F47),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
+                  color: PColors.color000000,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
             ),
 
-            // Price and Stock
+            // Price and Quantity in Row
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // Price section
+                  Text(
+                    "price : ",
+                    style: getTextStylNunito(
+                      color: const Color.fromARGB(255, 40, 41, 50),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
                   Text(
                     "₹$price",
                     style: TextStyle(
                       fontFamily: "Overpass",
-                      color: const Color(0xff090F47),
+                      color: PColors.color0C9C34,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 6),
+
+                  const SizedBox(width: 12),
+                  // Quantity section
                   Text(
-                    "₹$originalPrice",
-                    style: TextStyle(
-                      fontFamily: "Overpass",
-                      color: const Color(0xff9D9EA4),
-                      fontSize: 10,
-                      decoration: TextDecoration.lineThrough,
+                    "quantity: ",
+                    style: getTextStylNunito(
+                      color: const Color.fromARGB(255, 40, 41, 50),
+                      fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(width: 6),
-
-                  // Red "Out of Stock" if not available
-                  if (!isAvailable)
-                    Text(
-                      "Out of Stock",
-                      style: getTextStylNunito(
-                        color: const Color(0xffD32F2F),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                  Text(
+                    "$quantity",
+                    style: const TextStyle(
+                      fontFamily: "Overpass",
+                      color: Color(0xff090F47),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (!isAvailable) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "Out of Stock",
+                        style: getTextStylNunito(
+                          color: const Color(0xffD32F2F),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  ],
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // Edit Elevated Button
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed:
+                      onEdit ??
+                      () {
+                        debugPrint("Edit button pressed for $title");
+                      },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PColors.color0C9C34,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    "Edit",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -174,3 +234,5 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
+
+
