@@ -23,7 +23,8 @@ class ProductEntity {
           : (json['price'] as double),
       quantity: json['quantity'] ?? 0,
       // Try different possible column names for image
-      image: json['image'] ?? 
+      image: json['images'] ??
+             json['image'] ?? 
              json['imageUrl'] ?? 
              json['image_url'] ?? 
              json['photo'] ?? 
